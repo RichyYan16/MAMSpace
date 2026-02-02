@@ -1,4 +1,4 @@
-# Niranjan Nair - ICSP
+# Richy Yan - ICSP
 
 Run `npm run dev` to run the site on localhost. To enter admin mode, log in with the email `nnair@wpi.edu` and the password `admin-password`.
 
