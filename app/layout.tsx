@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthContextProvider } from '@/contexts/auth'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
     title: 'MAMS Database',
@@ -13,10 +14,18 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
             <body>
-                <AuthContextProvider>{children}</AuthContextProvider>
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="system"
+                    enableSystem
+                    disableTransitionOnChange
+                >
+                    <AuthContextProvider>{children}</AuthContextProvider>
+                </ThemeProvider>
             </body>
         </html>
     )
 }
+

@@ -27,8 +27,15 @@ export default function Page() {
     });
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [passwordSuccess, setPasswordSuccess] = useState("");
+    const [passwordLoading, setPasswordLoading] = useState(false);
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, updateUserPassword } = useAuth();
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -87,6 +94,56 @@ export default function Page() {
         setNewEducation((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handlePasswordChange = async (e: FormEvent) => {
+        e.preventDefault();
+        setPasswordError("");
+        setPasswordSuccess("");
+        setPasswordLoading(true);
+
+        if (!currentPassword.trim()) {
+            setPasswordError("Current password is required.");
+            setPasswordLoading(false);
+            return;
+        }
+
+        if (!newPassword.trim()) {
+            setPasswordError("New password is required.");
+            setPasswordLoading(false);
+            return;
+        }
+
+        if (newPassword.trim() !== confirmPassword.trim()) {
+            setPasswordError("New passwords do not match.");
+            setPasswordLoading(false);
+            return;
+        }
+
+        if (newPassword.trim().length < 6) {
+            setPasswordError("New password must be at least 6 characters long.");
+            setPasswordLoading(false);
+            return;
+        }
+
+        if (newPassword.trim() === currentPassword.trim()) {
+            setPasswordError("New password must be different from current password.");
+            setPasswordLoading(false);
+            return;
+        }
+
+        try {
+            await updateUserPassword!(currentPassword, newPassword);
+            setPasswordSuccess("Password updated successfully!");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setShowPasswordForm(false);
+        } catch (err: any) {
+            setPasswordError(err.message || "Failed to update password.");
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
+
     return (
         <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
             <div className="w-full max-w-sm">
@@ -115,9 +172,8 @@ export default function Page() {
                                             id="lastName"
                                             placeholder="Enter your last name"
                                             type="text"
-                                            placeholder="John Doe"
                                             required
-                                            value={name}
+                                            value={lastName}
                                         />
                                     </div>
 
@@ -200,6 +256,92 @@ export default function Page() {
                                                         </Button>
                                                     </div>
                                                 ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Password Change Section */}
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <h3 className="text-lg font-medium">Security</h3>
+                                        {!showPasswordForm ? (
+                                            <Button 
+                                                onClick={() => setShowPasswordForm(true)}
+                                                variant="outline"
+                                                className="w-full"
+                                                type="button"
+                                            >
+                                                Change Password
+                                            </Button>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="currentPassword">Current Password</Label>
+                                                    <Input
+                                                        id="currentPassword"
+                                                        type="password"
+                                                        value={currentPassword}
+                                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                                        placeholder="Enter current password"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="newPassword">New Password</Label>
+                                                    <Input
+                                                        id="newPassword"
+                                                        type="password"
+                                                        value={newPassword}
+                                                        onChange={(e) => setNewPassword(e.target.value)}
+                                                        placeholder="Enter new password"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                                                    <Input
+                                                        id="confirmPassword"
+                                                        type="password"
+                                                        value={confirmPassword}
+                                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                                        placeholder="Confirm new password"
+                                                        required
+                                                    />
+                                                </div>
+                                                {passwordError && (
+                                                    <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded">
+                                                        {passwordError}
+                                                    </div>
+                                                )}
+                                                {passwordSuccess && (
+                                                    <div className="p-3 text-sm text-green-500 bg-green-50 border border-green-200 rounded">
+                                                        {passwordSuccess}
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-2">
+                                                    <Button 
+                                                        onClick={handlePasswordChange}
+                                                        disabled={passwordLoading}
+                                                        className="flex-1"
+                                                        type="button"
+                                                    >
+                                                        {passwordLoading ? "Updating..." : "Update Password"}
+                                                    </Button>
+                                                    <Button 
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setShowPasswordForm(false);
+                                                            setCurrentPassword("");
+                                                            setNewPassword("");
+                                                            setConfirmPassword("");
+                                                            setPasswordError("");
+                                                            setPasswordSuccess("");
+                                                        }}
+                                                        className="flex-1"
+                                                        type="button"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

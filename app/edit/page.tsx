@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, X, Trash2, AlertTriangle } from "lucide-react";
 import {
     Dialog,
@@ -20,7 +21,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/auth";
 import type { User, Education } from "@/lib/types";
 import { db } from "@/lib/firebase";
@@ -42,8 +43,8 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
     const targetUserId = resolvedSearchParams?.id || authUser?.uid;
     
     const predefinedRoles = [
-        "Judge",
-        "Advisor",
+        "STEM Fair Judge",
+        "Project Advisor",
         "Alumni",
         "Student",
         "Community Service",
@@ -65,7 +66,6 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
     ];
 
     const [formData, setFormData] = useState<Partial<User>>({
-        email: "",
         avatar: "",
         bio: "",
         education: [],
@@ -76,6 +76,8 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
     const [lastName, setLastName] = useState("");
     
     const [newRole, setNewRole] = useState("");
+    const [newExpertise, setNewExpertise] = useState("");
+    const [universities, setUniversities] = useState<string[]>([]);
     const [newEducation, setNewEducation] = useState<Partial<Education>>({
         degree: "",
         institution: "",
@@ -139,11 +141,36 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
 
     const toggleRole = (role: string) => {
         setFormData((prev) => {
-            const current = prev.roles || [];
-            if (current.includes(role)) {
-                return { ...prev, roles: current.filter((r) => r !== role) };
+            const currentRoles = prev.roles || [];
+            
+            if (currentRoles.includes(role)) {
+                return { 
+                    ...prev, 
+                    roles: currentRoles.filter((r) => r !== role)
+                };
             } else {
-                return { ...prev, roles: [...current, role] };
+                return { 
+                    ...prev, 
+                    roles: [...currentRoles, role]
+                };
+            }
+        });
+    };
+
+    const toggleExpertise = (expertise: string) => {
+        setFormData((prev) => {
+            const currentRoles = prev.roles || [];
+            
+            if (currentRoles.includes(expertise)) {
+                return { 
+                    ...prev, 
+                    roles: currentRoles.filter((r) => r !== expertise)
+                };
+            } else {
+                return { 
+                    ...prev, 
+                    roles: [...currentRoles, expertise]
+                };
             }
         });
     };
@@ -158,11 +185,14 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
         }
     };
 
-    const removeRole = (roleToRemove: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            roles: prev.roles?.filter((role) => role !== roleToRemove),
-        }));
+    const addCustomExpertise = () => {
+        if (newExpertise.trim() && !formData.roles?.includes(newExpertise.trim())) {
+            setFormData((prev) => ({
+                ...prev,
+                roles: [...(prev.roles || []), newExpertise.trim()],
+            }));
+            setNewExpertise("");
+        }
     };
 
     const addEducation = () => {
@@ -187,15 +217,36 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
         setNewEducation((prev) => ({ ...prev, [name]: value }));
     };
 
+
+    useEffect(() => {
+        const loadUniversities = async () => {
+            try {
+                // This would typically fetch from a universities collection
+                // For now, we'll use some default universities
+                const defaultUniversities = [
+                    "Harvard University",
+                    "Stanford University", 
+                    "MIT",
+                    "University of California Berkeley",
+                    "Yale University",
+                    "Princeton University",
+                    "Columbia University",
+                    "University of Oxford",
+                    "Cambridge University"
+                ];
+                setUniversities(defaultUniversities);
+            } catch (error) {
+                console.error("Error loading universities:", error);
+            }
+        };
+        
+        loadUniversities();
+    }, []);
+
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
         if (!firstName?.trim() || !lastName?.trim()) newErrors.name = "First and last name are required";
-        if (!formData.email?.trim()) newErrors.email = "Email is required";
-
-        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = "Please enter a valid email address";
-        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -216,9 +267,6 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
                 name: `${firstName.trim()} ${lastName.trim()}`,
                 updatedAt: new Date().toISOString(),
             };
-
-            console.log("Saving user data:", userData);
-            console.log("Education being saved:", userData.education);
 
             if (!user?.createdAt) {
                 userData.createdAt = new Date().toISOString();
@@ -340,19 +388,6 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
                                     placeholder="Enter your last name"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={formData.email || ""}
-                                    onChange={handleChange}
-                                    className={errors.email ? "border-red-500" : ""}
-                                    disabled={saving}
-                                />
-                                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -419,37 +454,19 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
                                     </Button>
                                 </div>
                             </div>
-                            {(formData.roles && formData.roles.length > 0) && (
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {formData.roles.map((role, index) => (
-                                        <Badge key={index} variant="secondary" className="gap-1">
-                                            {role}
-                                            <X
-                                                className="h-3 w-3 cursor-pointer"
-                                                onClick={() => removeRole(role)}
-                                            />
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
                         <Separator />
 
                         <div className="space-y-2">
-                            <div className="text-center">
-                                <h3 className="text-lg font-semibold">Areas of Expertise</h3>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    Select your areas of expertise (optional)
-                                </p>
-                            </div>
+                            <Label>Areas of Expertise</Label>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 {expertiseList.map((expertise) => (
                                     <div key={expertise} className="flex items-center space-x-2 p-2 rounded-lg border border-muted hover:bg-muted/50 transition-colors">
                                         <Checkbox
                                             id={`expertise-${expertise}`}
                                             checked={formData.roles?.includes(expertise) ?? false}
-                                            onCheckedChange={() => toggleRole(expertise)}
+                                            onCheckedChange={() => toggleExpertise(expertise)}
                                             disabled={saving}
                                         />
                                         <Label htmlFor={`expertise-${expertise}`} className="text-sm font-medium cursor-pointer">
@@ -458,18 +475,26 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
                                     </div>
                                 ))}
                             </div>
-                            {formData.roles && formData.roles.filter(role => expertiseList.includes(role)).length > 0 && (
-                                <div className="mt-4">
-                                    <p className="text-sm font-medium mb-2">Your Selected Expertise:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {formData.roles.filter(role => expertiseList.includes(role)).map((expertise, index) => (
-                                            <Badge key={index} variant="default" className="bg-primary text-primary-foreground">
-                                                {expertise}
-                                            </Badge>
-                                        ))}
-                                    </div>
+                            <div className="space-y-2 pt-2">
+                                <Label className="text-sm font-normal">Add custom expertise</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newExpertise}
+                                        onChange={(e) => setNewExpertise(e.target.value)}
+                                        placeholder="Enter custom expertise"
+                                        disabled={saving}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                addCustomExpertise();
+                                            }
+                                        }}
+                                    />
+                                    <Button type="button" onClick={addCustomExpertise} size="sm" disabled={saving}>
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                            )}
+                            </div>
                         </div>
 
                         <Separator />
@@ -484,13 +509,21 @@ export default function EditProfilePage({ searchParams }: { searchParams: Promis
                                     placeholder="Degree"
                                     disabled={saving}
                                 />
-                                <Input
-                                    name="institution"
-                                    value={newEducation.institution}
-                                    onChange={handleEducationChange}
-                                    placeholder="Institution"
-                                    disabled={saving}
-                                />
+                                <Select 
+                                    value={newEducation.institution} 
+                                    onValueChange={(value) => setNewEducation(prev => ({ ...prev, institution: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select university" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {universities.map((university, index) => (
+                                            <SelectItem key={index} value={university}>
+                                                {university}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <Input
                                     name="year"
                                     value={newEducation.year}

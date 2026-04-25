@@ -1,10 +1,6 @@
-# Niranjan Nair - ICSP
+# Richy Yan - ICSP
 
 Run `npm run dev` to run the site on localhost. To enter admin mode, log in with the email `nnair@wpi.edu` and the password `admin-password`.
-
-## Secret Keys
-
-Currently, Firebase API keys are exposed in the code, for ease of use and ease of setup. Because of this, I have not put this project up on Github. Furthermore, the Firestore database is currently in test mode for ease of testing, so there is open access. It can easily be changed to only allow authenticated users to make changes. To secure private keys, I have made a file `.env.local`, which is ignored by git and is standard for NextJS. Simply add the secrets as environment variables and replace their places in the code with `process.env.API_KEY_NAME` (with `API_KEY_NAME` being the name for the API key's environment variable).
 
 ## Authentication
 

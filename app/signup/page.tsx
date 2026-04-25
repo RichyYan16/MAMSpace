@@ -79,8 +79,9 @@ export default function Page() {
             setError("Passwords do not match.");
             return;
         }
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters.");
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            setError("Password must be at least 8 characters long and include at least one uppercase letter, one number, and one special character.");
             return;
         }
 
@@ -104,9 +105,6 @@ export default function Page() {
                 photoURL: ""
             };
 
-            console.log("Signup - Saving user data:", userData);
-            console.log("Signup - Education being saved:", userData.education);
-
             await setDoc(doc(db, "users", userId), userData, { merge: true });
 
             await updateProfile(userCredential.user, {
@@ -118,7 +116,7 @@ export default function Page() {
                 const sendWelcomeEmail = httpsCallable(functions, "sendWelcomeEmail");
                 await sendWelcomeEmail({
                     email: email,
-                    name: name.trim(),
+                    name: `${firstName.trim()} ${lastName.trim()}`,
                     appUrl: window.location.origin
                 });
             } catch (err) {
