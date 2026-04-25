@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { User } from "@/lib/types";
 import { UserForm } from "@/components/user-form";
 import {
@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "./ui/badge";
+import { useRouter } from "next/navigation";
 
 interface UserManagementProps {
     users: User[];
@@ -31,6 +32,13 @@ interface UserManagementProps {
 
 export function UserManagement({ users, onAddUser, onUpdateUser, onDeleteUser, isAdmin, currentUserUid, currentUserEmail }: UserManagementProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const router = useRouter();
+    
+    const handleTagClick = (tag: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        router.push(`/tags/${encodeURIComponent(tag)}`);
+    };
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -109,7 +117,7 @@ export function UserManagement({ users, onAddUser, onUpdateUser, onDeleteUser, i
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
-                                    <TableHead>Roles</TableHead>
+                                    <TableHead>Tags</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -121,8 +129,23 @@ export function UserManagement({ users, onAddUser, onUpdateUser, onDeleteUser, i
                                         <TableCell>
                                             <div className="flex flex-wrap gap-2">
                                                 {user.roles?.map((role, index) => (
-                                                    <Badge key={index} variant="secondary" className="font-normal">
+                                                    <Badge 
+                                                        key={`role-${index}`} 
+                                                        variant="secondary" 
+                                                        className="font-normal cursor-pointer hover:bg-primary/20 transition-colors"
+                                                        onClick={(e) => handleTagClick(role, e)}
+                                                    >
                                                         {role}
+                                                    </Badge>
+                                                ))}
+                                                {user.expertises?.map((expertise, index) => (
+                                                    <Badge 
+                                                        key={`expertise-${index}`} 
+                                                        variant="secondary" 
+                                                        className="font-normal cursor-pointer hover:bg-primary/20 transition-colors"
+                                                        onClick={(e) => handleTagClick(expertise, e)}
+                                                    >
+                                                        {expertise}
                                                     </Badge>
                                                 ))}
                                             </div>

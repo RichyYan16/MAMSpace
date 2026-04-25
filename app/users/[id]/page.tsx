@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, GraduationCap, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, GraduationCap, Trash2, Linkedin, Phone, Briefcase, ExternalLink, Globe } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth";
 import type { User } from "@/lib/types";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useSearchParams } from "next/navigation";
+import { getRoleBadgeVariant, getExpertiseBadgeVariant } from "@/lib/badge-styles";
 
 type UserPageProps = {
     params: Promise<{ id: string }>;
@@ -32,10 +35,12 @@ export default function UserPage({ params }: UserPageProps) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const { user: authUser, deleteAccount } = useAuth();
+    const router = useRouter();
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [deletePassword, setDeletePassword] = useState("");
     const [deleteError, setDeleteError] = useState("");
     const [deleting, setDeleting] = useState(false);
+    const searchParams = useSearchParams();
     
     const resolvedParams = use(params);
     const { id } = resolvedParams;
@@ -108,6 +113,31 @@ export default function UserPage({ params }: UserPageProps) {
         };
     }, [id]);
 
+    const handleTagClick = (tag: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Navigate back to main page with tag filter
+        const url = new URL('/', window.location.origin);
+        url.searchParams.set('tag', encodeURIComponent(tag));
+        window.location.href = url.toString();
+    };
+
+    const getBackUrl = () => {
+        // Preserve search parameters when going back
+        const searchTerm = searchParams.get('search');
+        const tag = searchParams.get('tag');
+        
+        const url = new URL('/', window.location.origin);
+        if (searchTerm) {
+            url.searchParams.set('search', searchTerm);
+        }
+        if (tag) {
+            url.searchParams.set('tag', tag);
+        }
+        return url.toString();
+    };
+
     if (loading) {
         return (
             <div className="container mx-auto px-4 py-8">
@@ -137,10 +167,10 @@ export default function UserPage({ params }: UserPageProps) {
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="mb-6">
-                <Link href="/">
+                <Link href={getBackUrl()}>
                     <Button variant="ghost" className="pl-0">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to User Database
+                        Back to Search
                     </Button>
                 </Link>
             </div>
@@ -170,21 +200,80 @@ export default function UserPage({ params }: UserPageProps) {
                                             <Mail className="h-4 w-4 text-muted-foreground" />
                                             <span className="text-sm">{user.email}</span>
                                         </div>
+                                        {user.phone && user.contactPreferences?.phone && (
+                                            <div className="flex items-center gap-2">
+                                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                                <span className="text-sm">{user.phone}</span>
+                                            </div>
+                                        )}
+                                        {user.linkedinUrl && user.contactPreferences?.linkedin && (
+                                            <div className="flex items-center gap-2">
+                                                <Linkedin className="h-4 w-4 text-muted-foreground" />
+                                                <a 
+                                                    href={user.linkedinUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                                >
+                                                    LinkedIn Profile
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
+                                    {user.contactPreferences && (
+                                        <div className="mt-3 pt-3 border-t">
+                                            <h4 className="text-xs font-medium text-muted-foreground mb-2">Contact Preferences</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {user.contactPreferences.email && (
+                                                    <Badge variant="outline" className="text-xs">Email OK</Badge>
+                                                )}
+                                                {user.contactPreferences.linkedin && (
+                                                    <Badge variant="outline" className="text-xs">LinkedIn OK</Badge>
+                                                )}
+                                                {user.contactPreferences.phone && (
+                                                    <Badge variant="outline" className="text-xs">Phone OK</Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Separator />
 
-                                <div>
-                                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Roles</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {user.roles?.map((role, index) => (
-                                            <Badge key={index} variant="secondary" className="font-normal">
+                                {((user.roles && user.roles.length > 0) || (user.expertises && user.expertises.length > 0)) && (
+                                    <div>
+                                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Tags</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {user.roles?.map((role, index) => {
+                                        const badgeStyle = getRoleBadgeVariant(role);
+                                        return (
+                                            <Badge 
+                                                key={index} 
+                                                variant={badgeStyle.variant}
+                                                className={`font-normal cursor-pointer hover:opacity-80 transition-opacity ${badgeStyle.className}`}
+                                                onClick={(e) => handleTagClick(role, e)}
+                                            >
                                                 {role}
                                             </Badge>
-                                        ))}
+                                        );
+                                    })}
+                                    {user.expertises?.map((expertise, index) => {
+                                        const badgeStyle = getExpertiseBadgeVariant(expertise);
+                                        return (
+                                            <Badge 
+                                                key={index} 
+                                                variant={badgeStyle.variant}
+                                                className={`font-normal cursor-pointer hover:opacity-80 transition-opacity ${badgeStyle.className}`}
+                                                onClick={(e) => handleTagClick(expertise, e)}
+                                            >
+                                                {expertise}
+                                            </Badge>
+                                        );
+                                    })}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -299,6 +388,50 @@ export default function UserPage({ params }: UserPageProps) {
                                     )}
                                 </div>
                             </div>
+
+                            {user.projectHistory && user.projectHistory.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
+                                        <Briefcase className="h-5 w-5" />
+                                        Project History
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {user.projectHistory.map((project, index) => (
+                                            <div key={index} className="border rounded-lg p-4">
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h4 className="font-medium">{project.title}</h4>
+                                                    {project.url && (
+                                                        <a 
+                                                            href={project.url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                                                        >
+                                                            <ExternalLink className="h-4 w-4" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mb-2">{project.description}</p>
+                                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                                    <span>Role: {project.role}</span>
+                                                    <span>{project.startDate} - {project.endDate || 'Present'}</span>
+                                                </div>
+                                                {project.technologies && project.technologies.length > 0 && (
+                                                    <div className="mt-2">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {project.technologies.map((tech, techIndex) => (
+                                                                <Badge key={techIndex} variant="secondary" className="text-xs">
+                                                                    {tech}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
